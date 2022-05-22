@@ -51,7 +51,7 @@ public class RecommendationsRestController {
 	private static final String YOUR_PULSAR_TOKEN = System.getenv("ASTRA_STREAM_TOKEN");
 	private static final String STREAMING_TENANT = System.getenv("ASTRA_STREAM_TENANT");
 	private static final String STREAMING_PREFIX = STREAMING_TENANT + "/default/";
-	private static final String PENDING_ORDER_TOPIC = "persistent://" + STREAMING_PREFIX + "pending-orders";
+	private static final String PENDING_ORDER_TOPIC = "persistent://" + STREAMING_PREFIX + "user-ratings";
 
 	public RecommendationsRestController() {
 		DseDAL dse = new DseDAL();
@@ -60,11 +60,11 @@ public class RecommendationsRestController {
 		// Create Pulsar/Astra Streaming client
 		try {
 			client = PulsarClient.builder()
-			        .serviceUrl(SERVICE_URL)
-			        .authentication(
-			            AuthenticationFactory.token(YOUR_PULSAR_TOKEN)
-			        )
-			        .build();
+		        .serviceUrl(SERVICE_URL)
+		        .authentication(
+		            AuthenticationFactory.token(YOUR_PULSAR_TOKEN)
+		        )
+		        .build();
 		} catch (PulsarClientException e) {
 			// issue building the client stream connection
 			e.printStackTrace();
@@ -147,7 +147,7 @@ public class RecommendationsRestController {
 
     @PostMapping("/user/{userid}/rating/")
     @Operation(
-     summary = "Place an order",
+     summary = "User rates a new movie",
      description= "Create an edge for a user's rating of a movie",
      responses = {
        @ApiResponse(
