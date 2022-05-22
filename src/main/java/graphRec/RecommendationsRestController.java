@@ -4,6 +4,8 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
+import java.util.Date;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.google.gson.Gson;
@@ -172,8 +174,9 @@ public class RecommendationsRestController {
             @Parameter(name = "userid", description = "user identifier (int)", example = "694")
             int userid) {
     	
-    	// make sure userId is set on the request
+    	// make sure the request has the userid and the timestamp
     	rating.setUserId(userid);
+    	rating.setTimestamp(new Date());
     	
     	// send to pulsar/astra stream topic
     	String ratingJSON = new Gson().toJson(rating);
