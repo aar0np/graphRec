@@ -20,5 +20,4 @@ public class DseDAL {
 	public CqlSession getSession() {
 		return this.session;
 	}
-	
 }

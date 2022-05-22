@@ -45,18 +45,29 @@
 		    <artifactId>gremlin-core</artifactId>
 		    <version>3.6.0</version>
 		</dependency>
-		
 		<dependency>
 		    <groupId>org.apache.tinkerpop</groupId>
 		    <artifactId>tinkergraph-gremlin</artifactId>
 		    <version>3.6.0</version>
 		</dependency>
 		
-		<!-- GSON 
+		<!-- Pulsar -->
+		<dependency>
+	  		<groupId>org.apache.pulsar</groupId>
+			<artifactId>pulsar-client-api</artifactId>
+		  	<version>2.8.0</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.conscrypt</groupId>
+		    <artifactId>conscrypt-openjdk-uber</artifactId>
+		    <version>2.5.2</version>
+		    <scope>runtime</scope>
+		</dependency>
+
 		<dependency>
 		    <groupId>com.google.code.gson</groupId>
 		    <artifactId>gson</artifactId>
-		</dependency> Commenting-out for now.  Might need this later --> 
+		</dependency>
 
 	</dependencies>
 	
