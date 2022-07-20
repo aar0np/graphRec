@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.Scope;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -39,18 +40,59 @@ public class RecommendationsDAL {
 	}
 	
 	public GraphResultSet getRecommendationsByMovie(int movieId) {
-		GraphTraversal<Vertex, Object> traversal = g.V().has("Movie", "movie_id", movieId)
-			.aggregate("original_movie")
-		    .inE("rated").has("rating",P.gt(4.5)).outV()
-		    .outE("rated").has("rating",P.gt(4.5)).inV()
-		    .where(P.without("originalMovie"))
-		    .group()
-		        .by("movie_title")
-		        .by(__.count())
-		    .unfold()
-		    .order()
-		        .by(__.values(),Order.desc);
+		GraphTraversal<Vertex, Object> traversal = g.with("allow-filtering")
+			.V().has("Movie", "movie_id", movieId)
+				.aggregate("originalMovie")
+			    .inE("rated").has("rating",P.gt("4.5")).outV()
+			    .outE("rated").has("rating",P.gt("4.5")).inV()
+			    .where(P.without("originalMovie"))
+			    .group()
+			        .by("movie_title")
+			        .by(__.count())
+			    .unfold()
+			    .order(Scope.local)
+			        .by( ,Order.desc)
+		        .limit(5);
 	
+		FluentGraphStatement stmt = FluentGraphStatement.newInstance(traversal);
+		stmt.setGraphName("movies_dev");
+		GraphResultSet result = session.execute(stmt);
+		 
+		return result;	    
+	}
+	
+	public GraphResultSet getRecommendationsByUser(int userId) {
+//		dev.V().has("User","user_id", 694).   // look up a user
+//		   outE("rated").                     // traverse to all rated movies
+//		     order().by("timestamp", desc).   // order all edges by time
+//		     limit(1).inV().                  // traverse to the most recent rated movie
+//		     aggregate("originalMovie").      // put this movie in a collection
+//		   inE("rated").has("rating", gt(4.5)).outV().  // all users who rated this movie a 5
+//		   outE("rated").has("rating", gt(4.5)).inV().  // the full recomendation set
+//		   where(without('originalMovie')).   // remove the original movie
+//		   group().                           // create a map of the recommendations
+//		     by("movie_title").               // an entry's key is the movie title, 
+//		     by(count()).                     // the value will be the total # of ratings
+//		   unfold().                          // unfold all map entries into the pipline
+//		   order().                           // order the results
+//		     by(values, desc)                 // by their count, descending
+
+		GraphTraversal<Vertex, Object> traversal = g.with("allow-filtering")
+			.V().has("User","user_id", userId)
+				.outE("rated")
+					.order().by("timestamp", Order.desc)
+					.limit(1).inV()
+					.aggregate("originalMovie")
+				.inE("rated").has("rating", P.gt("4.5")).outV()
+				.outE("rated").has("rating", P.gt("4.5")).inV()
+				.where(P.without("originalMovie"))
+				.group()
+					.by("movie_title")
+					.by(__.count())
+				.unfold()
+				.order(Scope.local)
+					.by(__.values(), Order.desc);
+				
 		FluentGraphStatement stmt = FluentGraphStatement.newInstance(traversal);
 		stmt.setGraphName("movies_dev");
 		GraphResultSet result = session.execute(stmt);

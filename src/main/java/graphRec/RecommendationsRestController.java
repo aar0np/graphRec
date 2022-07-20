@@ -12,6 +12,8 @@ import com.google.gson.Gson;
 
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.Schema;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +32,6 @@ import org.apache.pulsar.client.api.PulsarClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -47,6 +48,9 @@ public class RecommendationsRestController {
 	private RecommendationsDAL recomRepo;
 	private PulsarClient client;
 	
+	private static final String DSE_ENDPOINT = System.getenv("DSE_ENDPOINT");
+	private static final String DSE_DC = System.getenv("DSE_DATACENTER");
+	
 	private static final String SERVICE_URL = System.getenv("ASTRA_STREAM_URL");
 	private static final String YOUR_PULSAR_TOKEN = System.getenv("ASTRA_STREAM_TOKEN");
 	private static final String STREAMING_TENANT = System.getenv("ASTRA_STREAM_TENANT");
@@ -54,7 +58,7 @@ public class RecommendationsRestController {
 	private static final String PENDING_ORDER_TOPIC = "persistent://" + STREAMING_PREFIX + "user-ratings";
 
 	public RecommendationsRestController() {
-		DseDAL dse = new DseDAL();
+		DseDAL dse = new DseDAL(DSE_ENDPOINT, DSE_DC);
 		recomRepo = new RecommendationsDAL(dse.getSession());
 		
 		// Create Pulsar/Astra Streaming client
@@ -81,7 +85,7 @@ public class RecommendationsRestController {
          description = "A list of movies recommended by movieid",
          content = @Content(
            mediaType = "application/json",
-           schema = @Schema(implementation = String.class, name = "String")
+           schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class, name = "String")
          )
        ),
        @ApiResponse(
@@ -118,7 +122,7 @@ public class RecommendationsRestController {
          description = "A list of movies recommended by movieid",
          content = @Content(
            mediaType = "application/json",
-           schema = @Schema(implementation = String.class, name = "String")
+           schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class, name = "String")
          )
        ),
        @ApiResponse(
@@ -145,6 +149,42 @@ public class RecommendationsRestController {
     	return ResponseEntity.ok(recommendations);
     }
 
+    @GetMapping("/users/recommend/{userid}")
+    @Operation(
+     summary = "Retrieve realtime recommendations by userid",
+     description= "Find realtime recommendations by userid",
+     responses = {
+       @ApiResponse(
+         responseCode = "200",
+         description = "A list of movies recommended by userid",
+         content = @Content(
+           mediaType = "application/json",
+           schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = String.class, name = "String")
+         )
+       ),
+       @ApiResponse(
+         responseCode = "404", 
+         description = "userId not found",
+         content = @Content(mediaType = "")),
+       @ApiResponse(
+         responseCode = "400",
+         description = "Invalid parameter check userid format."),
+       @ApiResponse(
+         responseCode = "500",
+         description = "Internal error.") 
+    })
+    public ResponseEntity<String> findRealtimeRecommendationsByUserId(
+            HttpServletRequest req, 
+            @PathVariable(value = "userid")
+            @Parameter(name = "userid", description = "user identifier", example = "694")
+            int userid) {
+    	
+    	GraphResultSet results = recomRepo.getRecommendationsByUser(userid);
+    	String recommendations = parseResults(results);
+    	
+    	return ResponseEntity.ok(recommendations);
+    }
+    
     @PostMapping("/user/{userid}/rating/")
     @Operation(
      summary = "User rates a new movie",
@@ -193,13 +233,13 @@ public class RecommendationsRestController {
     private void sendToRatingStream(String message) throws Exception {
         // Create producer on a topic
     	try {
-	    	Producer<byte[]> orderProducer = client.newProducer()
+	    	Producer<String> ratingProducer = client.newProducer(Schema.STRING)
 	                .topic(PENDING_ORDER_TOPIC)
 	                .create();
 	
 	    	// Send a message to the topic
-	        orderProducer.send(message.getBytes());
-	        orderProducer.close();
+	    	ratingProducer.send(message);
+	        ratingProducer.close();
 		} catch (PulsarClientException e) {
 			// issue creating the streaming message producer
 			e.printStackTrace();
