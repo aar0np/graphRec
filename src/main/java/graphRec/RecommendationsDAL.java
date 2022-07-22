@@ -6,13 +6,14 @@ import com.datastax.oss.driver.api.core.CqlSession;
 
 import java.util.Map;
 
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
-import org.apache.tinkerpop.gremlin.process.traversal.P;
-import org.apache.tinkerpop.gremlin.process.traversal.Scope;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
+import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.Scope;
+import org.apache.tinkerpop.gremlin.structure.Column;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import static org.apache.tinkerpop.gremlin.process.traversal.Order.desc;
 import static com.datastax.dse.driver.api.core.graph.DseGraph.g;
 
 public class RecommendationsDAL {
@@ -40,6 +41,18 @@ public class RecommendationsDAL {
 	}
 	
 	public GraphResultSet getRecommendationsByMovie(int movieId) {
+//		dev.V().has("Movie","movie_id",1270).
+//	    aggregate("originalMovie").
+//	    inE("rated").has("rating",gt(4.5)).outV().
+//	    outE("rated").has("rating",gt(4.5)).inV().
+//	    where(without("originalMovie")).
+//	    group().
+//	        by("movie_title").
+//	        by(count()).
+//	    unfold().
+//	    order().
+//	        by(values, desc)
+	        
 		GraphTraversal<Vertex, Object> traversal = g.with("allow-filtering")
 			.V().has("Movie", "movie_id", movieId)
 				.aggregate("originalMovie")
@@ -48,10 +61,10 @@ public class RecommendationsDAL {
 			    .where(P.without("originalMovie"))
 			    .group()
 			        .by("movie_title")
-			        .by(__.count())
-			    .unfold()
+			        .by(__.count()).as("count")
 			    .order(Scope.local)
-			        .by( ,Order.desc)
+			        .by(Column.values,desc)
+			    .unfold()
 		        .limit(5);
 	
 		FluentGraphStatement stmt = FluentGraphStatement.newInstance(traversal);
@@ -80,7 +93,7 @@ public class RecommendationsDAL {
 		GraphTraversal<Vertex, Object> traversal = g.with("allow-filtering")
 			.V().has("User","user_id", userId)
 				.outE("rated")
-					.order().by("timestamp", Order.desc)
+					.order().by("timestamp", desc)
 					.limit(1).inV()
 					.aggregate("originalMovie")
 				.inE("rated").has("rating", P.gt("4.5")).outV()
@@ -91,7 +104,7 @@ public class RecommendationsDAL {
 					.by(__.count())
 				.unfold()
 				.order(Scope.local)
-					.by(__.values(), Order.desc);
+					.by(__.values(), desc);
 				
 		FluentGraphStatement stmt = FluentGraphStatement.newInstance(traversal);
 		stmt.setGraphName("movies_dev");
