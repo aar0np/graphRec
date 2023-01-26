@@ -4,7 +4,10 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 import static org.springframework.web.bind.annotation.RequestMethod.PUT;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -99,17 +102,14 @@ public class RecommendationsRestController {
          responseCode = "500",
          description = "Internal error.") 
     })
-    public ResponseEntity<String> findPreCompRecommendationsByMovieId(
+    public ResponseEntity<Stream<Recommendation>> findPreCompRecommendationsByMovieId(
             HttpServletRequest req, 
             @PathVariable(value = "movieid")
             @Parameter(name = "movieid", description = "movie identifier", example = "1270")
             int movieid) {
     	
-    	GraphResultSet results = recomRepo.getPrecomputedRecommendationsByMovie(movieid);
-    	// String recommendationsJSON = new Gson().toJson(results);
-    	String recommendations = parseResults(results);
-    	
-    	return ResponseEntity.ok(recommendations);
+    	List<Recommendation> recommendations = findPreComputedRecsByMovieId(movieid);
+    	return ResponseEntity.ok(recommendations.stream());
     }
     
     @GetMapping("/movies/recommend/{movieid}")
@@ -136,17 +136,14 @@ public class RecommendationsRestController {
          responseCode = "500",
          description = "Internal error.") 
     })
-    public ResponseEntity<String> findRealtimeRecommendationsByMovieId(
+    public ResponseEntity<Stream<Recommendation>> findRealtimeRecommendationsByMovieId(
             HttpServletRequest req, 
             @PathVariable(value = "movieid")
             @Parameter(name = "movieid", description = "movie identifier", example = "1270")
             int movieid) {
     	
-    	GraphResultSet results = recomRepo.getRecommendationsByMovie(movieid);
-    	// String recommendationsJSON = new Gson().toJson(results);
-    	String recommendations = parseResults(results);
-    	
-    	return ResponseEntity.ok(recommendations);
+    	List<Recommendation> recommendations = findRealtimeRecsByMovieId(movieid);
+    	return ResponseEntity.ok(recommendations.stream());
     }
 
     @GetMapping("/users/recommend/{userid}")
@@ -173,16 +170,15 @@ public class RecommendationsRestController {
          responseCode = "500",
          description = "Internal error.") 
     })
-    public ResponseEntity<String> findRealtimeRecommendationsByUserId(
+    public ResponseEntity<Stream<Recommendation>> findRealtimeRecommendationsByUserId(
             HttpServletRequest req, 
             @PathVariable(value = "userid")
             @Parameter(name = "userid", description = "user identifier", example = "694")
             int userid) {
     	
-    	GraphResultSet results = recomRepo.getRecommendationsByUser(userid);
-    	String recommendations = parseResults(results);
+    	List<Recommendation> recommendations = findRealtimeRecsByUserId(userid);
     	
-    	return ResponseEntity.ok(recommendations);
+    	return ResponseEntity.ok(recommendations.stream());
     }
     
     @PostMapping("/user/{userid}/rating/")
@@ -230,6 +226,29 @@ public class RecommendationsRestController {
     	return ResponseEntity.ok("Rating submitted!");
     }
     
+    public List<Recommendation> findPreComputedRecsByMovieId(int movieid) {
+
+    	GraphResultSet results = recomRepo.getPrecomputedRecommendationsByMovie(movieid);
+    	List<Recommendation> recommendations = parsePreComputeResults(results);
+
+    	return recommendations;
+    }
+    
+    public List<Recommendation> findRealtimeRecsByMovieId(int movieid) {
+
+    	GraphResultSet results = recomRepo.getRecommendationsByMovie(movieid);
+    	List<Recommendation> recommendations = parseResults(results);
+
+    	return recommendations;
+    }
+    
+    public List<Recommendation> findRealtimeRecsByUserId(int userid) {
+    	GraphResultSet results = recomRepo.getRecommendationsByUser(userid);
+    	List<Recommendation> recommendations = parseResults(results);	
+
+    	return recommendations;
+    }
+    
     private void sendToRatingStream(String message) throws Exception {
         // Create producer on a topic
     	try {
@@ -246,14 +265,39 @@ public class RecommendationsRestController {
 		}
     }
     
-    private String parseResults(GraphResultSet results) {
-    	StringBuilder output = new StringBuilder();
+    private List<Recommendation> parseResults(GraphResultSet results) {
+    	List<Recommendation> returnVal = new ArrayList<Recommendation>();
     	
-    	for (GraphNode node : results) {
-    		output.append(node).append("\n");
+    	for (GraphNode gNode : results) {
+    		Recommendation rec = new Recommendation();
+    		String node = gNode.toString()
+    				.replace('{',' ')
+    				.replace('}',' ');
+    		String[] values = node.trim().split("=");
+    		
+    		rec.setRecommendation(values[0]);
+    		rec.setScore(Double.parseDouble(values[1]));
+    		
+    		returnVal.add(rec);
     	}
     	
-    	return output.toString();
+    	return returnVal;
+    }
+    
+    private List<Recommendation> parsePreComputeResults(GraphResultSet results) {
+    	List<Recommendation> returnVal = new ArrayList<Recommendation>();
+    	
+    	for (GraphNode node : results) {
+    		Recommendation rec = new Recommendation();
+    		
+    		rec.setOriginal(node.getByKey("Original").asString());
+    		rec.setRecommendation(node.getByKey("Recommendation").asString());
+    		rec.setScore(node.getByKey("Score").asDouble());
+    		
+    		returnVal.add(rec);
+    	}
+    	
+    	return returnVal;
     }
     
 }

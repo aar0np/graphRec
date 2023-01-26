@@ -25,7 +25,8 @@ public class RecommendationsDAL {
 	
 	public GraphResultSet getPrecomputedRecommendationsByMovie(int movieId) {
 		
-		GraphTraversal<Vertex, Map<String, Object>> traversal = g.V().has("Movie", "movie_id", movieId).as("original_movie")
+		GraphTraversal<Vertex, Map<String, Object>> traversal = g.V()
+				.has("Movie", "movie_id", movieId).as("original_movie")
 				.outE("recommend")
 				.limit(5)
 				.project("Original", "Recommendation", "Score")

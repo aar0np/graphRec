@@ -2,3 +2,11 @@
 .project
 .settings/
 target/
+.java-version
+
+frontend/
+node_modules/
+package*.json
+tsconfig.json
+types.d.ts
+vite.*
