@@ -85,6 +85,8 @@ mvn spring-boot:run
 
 ## Invoking Endpoints
 
+The Swagger spec can be found here [http://127.0.0.1:8080/swagger-ui/index.html#/](http://127.0.0.1:8080/swagger-ui/index.html#/) while the app is running.
+
 ## Front End
 
 The front end layer was created w/ Vaadin.  To view, simply open [127.0.0.1:8080](127.0.0.1:8080) while the app is running.
