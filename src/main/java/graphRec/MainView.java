@@ -55,8 +55,9 @@ public class MainView extends VerticalLayout {
 			String[] selectedValues = listSelect.getValue().split(" \\| ");
 			int movieID = Integer.parseInt(selectedValues[1]);
 			image.setSrc(getImageFilename(movieID));
-			
 			List<Recommendation> recs = recController.findRealtimeRecsByMovieId(movieID);
+			//List<Recommendation> recs = recController.findPreComputedRecsByMovieId(movieID);
+			
 			grid.setItems(recs);
 		});
 
